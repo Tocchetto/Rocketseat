@@ -1,43 +1,75 @@
-const express = require('express');
+const express = require("express");
 
 const server = express();
 
 server.use(express.json());
 
-const users = ['Ariell', 'Guilherme', 'Wag'];
+const projects = [];
 
-server.get('/users', (req, res) => {
-  return res.json(users);
+function checkProjectExists(req, res, next) {
+  const { id } = req.params;
+  const project = projects.find(p => p.id == id);
+
+  if (!project) {
+    return res.status(400).json({ error: "Project not found" });
+  }
+
+  return next();
+}
+
+/**
+ * Middleware que dá log no número de requisições
+ */
+function logRequests(req, res, next) {
+  numberOfRequests++;
+
+  console.log(`Número de requisições: ${numberOfRequests}`);
+
+  return next();
+}
+
+server.use(logRequests);
+
+server.get("/projects", (req, res) => {
+  return res.json(projects);
 });
 
-server.get('/users/:index', (req, res) => {
-  const { index } = req.params;
+server.post("/projects", (req, res) => {
+  projects.push(req.body);
 
-  return res.json(users[index]);
+  return res.json(projects);
 });
 
-server.post('/users', (req, res) => {
-  const { name } = req.body;
-  users.push(name);
+server.put("/projects/:id", checkProjectExists, (req, res) => {
+  const { title } = req.body;
+  const { id } = req.params;
 
-  return res.json(users);
+  const project = projects.find(item => item.id === id);
+
+  project.title = title;
+
+  return res.json(projects);
 });
 
-server.put('/users/:index', (req, res) => {
-  const { name } = req.body;
-  const { index } = req.params;
+server.delete("/projects/:id", checkProjectExists, (req, res) => {
+  const { id } = req.params;
 
-  users[index] = name;
+  const index = projects.findIndex(item => item.id === id);
 
-  return res.json(users);
+  projects.splice(index, 1);
+
+  return res.send(projects);
 });
 
-server.delete('/users/:index', (req, res) => {
-  const { index } = req.params;
+server.post("/projects/:id/tasks", checkProjectExists, (req, res) => {
+  const { id } = req.params;
+  const { title } = req.body;
 
-  users.splice(index, 1);
+  const project = projects.find(p => p.id == id);
 
-  return res.send();
+  project.tasks.push(title);
+
+  return res.json(project);
 });
 
 server.listen(3000);
